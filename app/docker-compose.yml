@@ -1,0 +1,48 @@
+# Local development stack. The fallback values below are for local use only;
+# override them via environment variables or an .env file next to this file.
+name: gymnote
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: gymnote
+      POSTGRES_USER: gymnote
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gymnote-local-only}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gymnote -d gymnote"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build: ./backend
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=gymnote;Username=gymnote;Password=${POSTGRES_PASSWORD:-gymnote-local-only};GSS Encryption Mode=Disable
+      Jwt__Secret: ${JWT_SECRET:-local-only-jwt-secret-change-me-0123456789abcdef}
+      Jwt__Issuer: gymnote
+      Jwt__Audience: gymnote
+      RUN_MIGRATIONS: "true"
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+
+  gateway:
+    image: nginx:1.29-alpine
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  postgres-data:
