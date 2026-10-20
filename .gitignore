@@ -26,3 +26,4 @@ coverage/
 *.tfstate.*
 *.tfvars
 crash.log
+*.tfplan
