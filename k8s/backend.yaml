@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: dev
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: backend}
+  template:
+    metadata:
+      labels: {app: backend}
+    spec:
+      containers:
+        - name: backend
+          image: 084250374652.dkr.ecr.ap-southeast-1.amazonaws.com/gymnote-backend:v1
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ConnectionStrings__Default
+              valueFrom:
+                secretKeyRef: {name: gymnote-db, key: connection-string}
+            - name: Jwt__Secret
+              valueFrom:
+                secretKeyRef: {name: gymnote-app, key: jwt-secret}
+            - {name: Jwt__Issuer, value: gymnote}
+            - {name: Jwt__Audience, value: gymnote}
+            - {name: RUN_MIGRATIONS, value: "true"}
+            - {name: SEED_DEMO_DATA, value: "true"}
+          readinessProbe:
+            httpGet: {path: /health, port: 8080}
+          livenessProbe:
+            httpGet: {path: /health, port: 8080}
+            initialDelaySeconds: 20
+          resources:
+            requests: {cpu: 100m, memory: 192Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: dev
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+spec:
+  selector: {app: backend}
+  ports:
+    - port: 8080
+      targetPort: 8080
