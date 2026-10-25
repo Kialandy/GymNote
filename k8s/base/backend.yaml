@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: 084250374652.dkr.ecr.ap-southeast-1.amazonaws.com/gymnote-backend:v1
+          image: 084250374652.dkr.ecr.ap-southeast-1.amazonaws.com/gymnote-backend:IMAGE_TAG
           ports:
             - containerPort: 8080
           env:

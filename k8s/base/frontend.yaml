@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: 084250374652.dkr.ecr.ap-southeast-1.amazonaws.com/gymnote-frontend:v1
+          image: 084250374652.dkr.ecr.ap-southeast-1.amazonaws.com/gymnote-frontend:IMAGE_TAG
           ports:
             - containerPort: 80
           readinessProbe:
