@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Dùng: scripts/preview-up.sh feature/12345 <image_tag>
-# Tạo namespace + database + secret + deploy + in địa chỉ ALB cho một branch feature
+# Tạo namespace + database (sao chép từ dev) + secret + deploy + in địa chỉ ALB cho một branch feature
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source scripts/preview-common.sh
@@ -13,7 +13,10 @@ MAX_PREVIEWS=3
 N="${BASH_REMATCH[1]}"; NS="feature-$N"; DB="gymnote_f$N"
 
 # Giới hạn số môi trường preview chạy cùng lúc (cluster chỉ có 2 node nhỏ)
+# NEW=1 nghĩa là môi trường mới, chỉ khi đó mới sao chép dữ liệu từ dev
+NEW=0
 if ! kubectl get ns "$NS" >/dev/null 2>&1; then
+  NEW=1
   COUNT=$(kubectl get ns -l gymnote/preview=true --no-headers | wc -l)
   [ "$COUNT" -lt "$MAX_PREVIEWS" ] || { echo "Đã đủ $MAX_PREVIEWS môi trường preview, hãy xóa bớt branch cũ"; exit 1; }
 fi
@@ -25,6 +28,12 @@ kubectl label namespace "$NS" gymnote/preview=true --overwrite
 # Tạo database gymnote_f<số> nếu chưa có
 load_admin
 run_sql "SELECT 'CREATE DATABASE $DB' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$DB')\gexec"
+
+# Môi trường mới: sao chép dữ liệu từ database dev (gymnote). Các lần build sau giữ nguyên dữ liệu của feature
+if [ "$NEW" = "1" ]; then
+  echo "Sao chép dữ liệu từ gymnote sang $DB..."
+  clone_db gymnote "$DB"
+fi
 
 # Tạo/cập nhật secret chuỗi kết nối (trỏ đúng database của feature này)
 kubectl -n "$NS" create secret generic gymnote-db \
