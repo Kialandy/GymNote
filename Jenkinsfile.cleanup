@@ -3,15 +3,18 @@ pipeline {
   // Chạy mỗi 15 phút
   triggers { cron('H/15 * * * *') }
   options { disableConcurrentBuilds(); timeout(time: 20, unit: 'MINUTES') }
-  environment { AWS_DEFAULT_REGION = 'ap-southeast-1' }
+  environment {
+    AWS_DEFAULT_REGION = 'ap-southeast-1'
+    CLUSTER = 'gymnote-eks'
+  }
   stages {
     stage('Dọn môi trường preview') {
       steps {
         sh '''
-          # Tìm cluster của dự án (tài khoản dùng chung nên lọc theo tiền tố gymnote)
-          CLUSTER=$(aws eks list-clusters --query "clusters[?starts_with(@, 'gymnote')]|[0]" --output text)
-          # Stack đang bị hủy thì không có gì để dọn
-          if [ "$CLUSTER" = "None" ] || [ -z "$CLUSTER" ]; then echo "Không có cluster, bỏ qua"; exit 0; fi
+          # Stack đang bị hủy (không có cluster) thì không có gì để dọn
+          if ! aws eks describe-cluster --name "$CLUSTER" >/dev/null 2>&1; then
+            echo "Không có cluster $CLUSTER, bỏ qua"; exit 0
+          fi
           aws eks update-kubeconfig --name "$CLUSTER"
           chmod +x scripts/*.sh
           scripts/preview-cleanup.sh
