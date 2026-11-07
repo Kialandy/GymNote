@@ -16,7 +16,7 @@ VPC_ID=$(aws ec2 describe-vpcs --region "$REGION" \
 echo "==> Step 1: remove in-cluster resources that create AWS resources"
 if aws eks describe-cluster --name "$CLUSTER" --region "$REGION" >/dev/null 2>&1; then
   aws eks update-kubeconfig --name "$CLUSTER" --region "$REGION" >/dev/null
-  kubectl delete ingress --all -A --ignore-not-found --timeout=180s || true
+  kubectl delete ingress --all -A --ignore-not-found --timeout=300s || true
   kubectl get svc -A --no-headers \
     -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name,TYPE:.spec.type \
     | awk '$3=="LoadBalancer"{print $1" "$2}' \
